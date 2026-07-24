@@ -22,7 +22,6 @@ import { agentTools, handleAgentTool } from "./domains/agents.js";
 import { ticketTools, handleTicketTool } from "./domains/tickets.js";
 import { alertTools, handleAlertTool } from "./domains/alerts.js";
 import { contactTools, handleContactTool } from "./domains/contacts.js";
-import { setServerRef } from "./utils/server-ref.js";
 import { registerResourceHandlers } from "./resources.js";
 import type { AteraCredentials } from "./utils/client.js";
 
@@ -107,6 +106,12 @@ const backTool: Tool = {
 /**
  * Create a fresh MCP server instance with all handlers registered.
  * Called once for stdio, or per-request for HTTP / Workers transports.
+ *
+ * The returned server is NOT registered as "the" server anywhere here —
+ * callers are responsible for binding it into the per-request `server-ref`
+ * AsyncLocalStorage context (via `runWithServerRef` / `bindServerRef`) so
+ * elicitation helpers resolve the right server even after await gaps. See
+ * `utils/server-ref.ts` for why this matters.
  */
 export function createMcpServer(): Server {
   const state = { currentDomain: null as Domain | null };
@@ -123,7 +128,6 @@ export function createMcpServer(): Server {
       },
     }
   );
-  setServerRef(server);
   registerResourceHandlers(server);
 
   server.setRequestHandler(ListToolsRequestSchema, async () => {
