@@ -18,6 +18,13 @@ import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/
 import { runWithCredentials } from "./utils/client.js";
 import { createMcpServer } from "./mcp-server.js";
 import { runWithServerRef, bindServerRef } from "./utils/server-ref.js";
+import { verifyS2sHeader, S2S_HEADER } from "./s2s-verify.js";
+
+// Conduit service-to-service auth (gateway#377 parity). Non-empty =
+// enforce X-Gateway-S2S on every /mcp request; empty = disabled, behavior
+// exactly as before (dark-by-default until the gateway provisions this
+// container's derived subkey). See src/s2s-verify.ts.
+const S2S_SECRET = process.env.CONDUIT_S2S_SECRET || "";
 
 /**
  * Transport and auth configuration types
@@ -72,6 +79,16 @@ async function startHttpTransport(): Promise<void> {
 
       // MCP endpoint
       if (url.pathname === "/mcp") {
+        if (S2S_SECRET && !verifyS2sHeader(req.headers[S2S_HEADER] as string | undefined, S2S_SECRET)) {
+          res.writeHead(401, { "Content-Type": "application/json" });
+          res.end(
+            JSON.stringify({
+              error: "Missing or invalid X-Gateway-S2S header: this endpoint only accepts requests signed by the gateway.",
+            })
+          );
+          return;
+        }
+
         // In gateway mode, extract credentials and bind them to the
         // request's async context — no process.env mutation.
         const handleMcp = () => {
