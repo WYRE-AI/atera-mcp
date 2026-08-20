@@ -5,20 +5,18 @@ FROM node:26-alpine AS builder
 ARG VERSION="unknown"
 ARG COMMIT_SHA="unknown"
 ARG BUILD_DATE="unknown"
-ARG GITHUB_TOKEN
 
 # Set working directory
 WORKDIR /app
 
 # Copy package files
 COPY package*.json ./
-COPY .npmrc ./
 
-# Inject GitHub Packages auth token for npm ci
-RUN echo "//npm.pkg.github.com/:_authToken=${GITHUB_TOKEN}" >> .npmrc
-
+# GitHub Packages auth comes in as a BuildKit secret (the release workflow
+# passes --secret id=npmrc) so the token never lands in a layer or in image
+# metadata. Local builds: --secret id=npmrc,src=$HOME/.npmrc
 # Install dependencies (--ignore-scripts prevents 'prepare' from running before source is copied)
-RUN npm ci --ignore-scripts
+RUN --mount=type=secret,id=npmrc,target=/root/.npmrc npm ci --ignore-scripts
 
 # Copy source code
 COPY . .
