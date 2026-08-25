@@ -11,7 +11,7 @@ services:
       - path: /
     envs:
       # GitHub PAT (read:packages) used at build time to install the private
-      # @wyre-technology/* dependency from GitHub Packages. Passed to the
+      # @wyre-ai/* dependency from GitHub Packages. Passed to the
       # Dockerfile's `ARG GITHUB_TOKEN`. Set this as an encrypted SECRET in the
       # App Platform UI before the first deploy, or the build fails with npm 401.
       - key: GITHUB_TOKEN

@@ -1,5 +1,5 @@
 {
-  "name": "@wyre-technology/atera-mcp",
+  "name": "@wyre-ai/atera-mcp",
   "version": "1.1.7",
   "description": "Atera RMM MCP server for Claude",
   "type": "module",
@@ -28,7 +28,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/wyre-technology/atera-mcp.git"
+    "url": "git+https://github.com/WYRE-AI/atera-mcp.git"
   },
   "keywords": [
     "mcp",
@@ -41,9 +41,9 @@
   "author": "Wyre Technology",
   "license": "Apache-2.0",
   "bugs": {
-    "url": "https://github.com/wyre-technology/atera-mcp/issues"
+    "url": "https://github.com/WYRE-AI/atera-mcp/issues"
   },
-  "homepage": "https://github.com/wyre-technology/atera-mcp#readme",
+  "homepage": "https://github.com/WYRE-AI/atera-mcp#readme",
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.29.0",
     "@wyre-technology/node-atera": "^1.0.6"
