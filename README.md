@@ -15,16 +15,16 @@ Model Context Protocol (MCP) server for interacting with the Atera RMM API. Impl
 > 1. Create a GitHub **Personal Access Token** with the `read:packages` scope
 >    ([classic token](https://github.com/settings/tokens/new?scopes=read:packages&description=atera-mcp%20deploy)).
 >    Any GitHub account works — you do **not** need to be a member of the
->    `wyre-technology` org to read its public packages.
+>    `WYRE-AI` org to read its public packages.
 > 2. Add it as a build variable when prompted by the deploy flow:
 >    - **Cloudflare Workers** → set a build variable named **`NODE_AUTH_TOKEN`** to your PAT
 >      (Workers → Settings → Build → Variables and Secrets).
 >    - **DigitalOcean App Platform** → set an encrypted env var named **`GITHUB_TOKEN`**
 >      with scope **Build Time** to your PAT (the `.do/app.yaml` already declares it).
 
-[![Deploy to DO](https://www.deploytodo.com/do-btn-blue.svg)](https://cloud.digitalocean.com/apps/new?repo=https://github.com/wyre-technology/atera-mcp/tree/main)
+[![Deploy to DO](https://www.deploytodo.com/do-btn-blue.svg)](https://cloud.digitalocean.com/apps/new?repo=https://github.com/WYRE-AI/atera-mcp/tree/main)
 
-[![Deploy to Cloudflare Workers](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/wyre-technology/atera-mcp)
+[![Deploy to Cloudflare Workers](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/WYRE-AI/atera-mcp)
 
 > [!NOTE]
 > The DigitalOcean target builds the full Docker image and runs the complete MCP
@@ -32,7 +32,7 @@ Model Context Protocol (MCP) server for interacting with the Atera RMM API. Impl
 > Workers target is currently a thin entrypoint stub (the `/mcp` route returns
 > `501 Not Implemented`) and is best suited to gateway-style deployments; for a
 > full self-hosted server prefer DigitalOcean or the prebuilt container image
-> (`ghcr.io/wyre-technology/atera-mcp`).
+> (`ghcr.io/wyre-ai/atera-mcp`).
 
 ## Features
 
@@ -51,16 +51,16 @@ token even for public packages. Authenticate once, then install:
 # Authenticate npm to GitHub Packages (token needs the read:packages scope)
 export NODE_AUTH_TOKEN=$(gh auth token)   # or a PAT with read:packages
 
-npm install @wyre-technology/atera-mcp
+npm install @wyre-ai/atera-mcp
 ```
 
-The repo's `.npmrc` already points the `@wyre-technology` scope at GitHub Packages and
+The repo's `.npmrc` already points the `@wyre-ai` scope at GitHub Packages and
 reads the token from `NODE_AUTH_TOKEN`, so no further config is needed.
 
 Or build from source:
 
 ```bash
-git clone https://github.com/wyre-technology/atera-mcp.git
+git clone https://github.com/WYRE-AI/atera-mcp.git
 cd atera-mcp
 npm install
 npm run build
@@ -91,7 +91,7 @@ Add to your `claude_desktop_config.json`:
   "mcpServers": {
     "atera": {
       "command": "npx",
-      "args": ["@wyre-technology/atera-mcp"],
+      "args": ["@wyre-ai/atera-mcp"],
       "env": {
         "ATERA_API_KEY": "your-api-key-here"
       }
