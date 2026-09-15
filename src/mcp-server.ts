@@ -125,6 +125,11 @@ export function createMcpServer(): Server {
       capabilities: {
         tools: {},
         resources: {},
+        extensions: {
+          "io.modelcontextprotocol/ui": {
+            mimeTypes: ["text/html;profile=mcp-app"],
+          },
+        },
       },
     }
   );

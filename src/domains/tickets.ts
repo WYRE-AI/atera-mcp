@@ -192,7 +192,11 @@ export const ticketTools: Tool[] = [
 export async function handleTicketTool(
   name: string,
   args: Record<string, unknown>
-): Promise<{ content: { type: "text"; text: string }[]; isError?: boolean }> {
+): Promise<{
+  content: { type: "text"; text: string }[];
+  structuredContent?: Record<string, unknown>;
+  isError?: boolean;
+}> {
   const client = await getClient();
 
   switch (name) {
@@ -256,11 +260,22 @@ export async function handleTicketTool(
 
       // MCP Apps: attach the normalized card payload the ui:// ticket card
       // renders from. Best-effort — a null card just means no UI surface.
+      let card: Awaited<ReturnType<typeof buildTicketCard>> = null;
       try {
-        const card = await buildTicketCard(payload, client);
+        card = await buildTicketCard(payload, client);
         if (card) payload._card = card;
       } catch {
         // Card building never fails the tool result.
+      }
+
+      if (card) {
+        const summary = `Ticket #${card.id}: ${card.title ?? "Untitled"}${
+          card.status ? ` (${card.status})` : ""
+        }${card.customer ? ` — ${card.customer}` : ""}.`;
+        return {
+          content: [{ type: "text", text: summary }],
+          structuredContent: payload,
+        };
       }
 
       return {
