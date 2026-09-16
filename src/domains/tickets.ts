@@ -187,7 +187,13 @@ export const ticketTools: Tool[] = [
 ];
 
 /**
- * Handle ticket domain tool calls
+ * Handle ticket domain tool calls.
+ *
+ * SEP-1865: when a `_card` payload is attached, the response's `content` is a
+ * short human-readable summary only -- callers needing the full ticket data
+ * (including `_card`) must read `structuredContent`, which is only present
+ * on the card-carrying branch. Treat `content` as a display summary, never
+ * as the full payload.
  */
 export async function handleTicketTool(
   name: string,
