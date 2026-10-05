@@ -187,12 +187,22 @@ export const ticketTools: Tool[] = [
 ];
 
 /**
- * Handle ticket domain tool calls
+ * Handle ticket domain tool calls.
+ *
+ * SEP-1865: when a `_card` payload is attached, the response's `content` is a
+ * short human-readable summary only -- callers needing the full ticket data
+ * (including `_card`) must read `structuredContent`, which is only present
+ * on the card-carrying branch. Treat `content` as a display summary, never
+ * as the full payload.
  */
 export async function handleTicketTool(
   name: string,
   args: Record<string, unknown>
-): Promise<{ content: { type: "text"; text: string }[]; isError?: boolean }> {
+): Promise<{
+  content: { type: "text"; text: string }[];
+  structuredContent?: Record<string, unknown>;
+  isError?: boolean;
+}> {
   const client = await getClient();
 
   switch (name) {
@@ -256,11 +266,22 @@ export async function handleTicketTool(
 
       // MCP Apps: attach the normalized card payload the ui:// ticket card
       // renders from. Best-effort — a null card just means no UI surface.
+      let card: Awaited<ReturnType<typeof buildTicketCard>> = null;
       try {
-        const card = await buildTicketCard(payload, client);
+        card = await buildTicketCard(payload, client);
         if (card) payload._card = card;
       } catch {
         // Card building never fails the tool result.
+      }
+
+      if (card) {
+        const summary = `Ticket #${card.id}: ${card.title ?? "Untitled"}${
+          card.status ? ` (${card.status})` : ""
+        }${card.customer ? ` — ${card.customer}` : ""}.`;
+        return {
+          content: [{ type: "text", text: summary }],
+          structuredContent: payload,
+        };
       }
 
       return {

@@ -141,21 +141,47 @@ describe("tickets domain", () => {
     });
 
     describe("atera_tickets_get", () => {
-      it("should call client.tickets.get with ticketId", async () => {
+      it("should call client.tickets.get with ticketId, returning a text summary and structuredContent", async () => {
         const mockTicket = {
           TicketID: 789,
           TicketTitle: "Server Down",
           TicketStatus: "Open",
         };
         mockClient.tickets.get.mockResolvedValue(mockTicket);
+        mockClient.tickets.listComments.mockResolvedValue({
+          totalItemCount: 0,
+          page: 1,
+          itemsInPage: 0,
+          totalPages: 1,
+          prevLink: null,
+          nextLink: null,
+          items: [],
+        });
 
         const result = await handleTicketTool("atera_tickets_get", {
           ticketId: 789,
         });
 
         expect(mockClient.tickets.get).toHaveBeenCalledWith(789);
+        // content is a short human-readable summary, not a JSON dump.
+        expect(result.content[0].text).not.toMatch(/^[{[]/);
         expect(result.content[0].text).toContain("Server Down");
+        expect(result.content[0].text).toContain("Open");
+        expect(result.structuredContent?.TicketID).toBe(789);
         expect(result.isError).toBeUndefined();
+
+        // SEP-1865: structuredContent carries the full _card payload the
+        // ui:// ticket card renders from.
+        const card = result.structuredContent?._card as {
+          id?: number;
+          title?: string;
+          status?: string;
+          comments?: unknown[];
+        };
+        expect(card.id).toBe(789);
+        expect(card.title).toBe("Server Down");
+        expect(card.status).toBe("Open");
+        expect(card.comments).toEqual([]);
       });
     });
 
