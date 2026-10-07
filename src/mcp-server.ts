@@ -50,6 +50,10 @@ const domainDescriptions: Record<Domain, string> = {
 /**
  * Get tools for a specific domain
  */
+function isDomain(value: unknown): value is Domain {
+  return typeof value === "string" && Object.hasOwn(domainDescriptions, value);
+}
+
 function getDomainTools(domain: Domain): Tool[] {
   switch (domain) {
     case "customers":
@@ -71,7 +75,7 @@ function getDomainTools(domain: Domain): Tool[] {
 const navigateTool: Tool = {
   name: "atera_navigate",
   description:
-    "Navigate to a specific domain in Atera. Call this first to select which area you want to work with. After navigation, domain-specific tools will be available.",
+    "Navigate to a specific domain in Atera. Call this first to select which area you want to work with. After navigation the server sends notifications/tools/list_changed so the client reloads the tool list and domain-specific tools become available.",
   inputSchema: {
     type: "object",
     properties: {
@@ -96,7 +100,7 @@ const navigateTool: Tool = {
 const backTool: Tool = {
   name: "atera_back",
   description:
-    "Return to domain selection. Use this to switch to a different area of Atera.",
+    "Return to domain selection. Use this to switch to a different area of Atera. The server sends notifications/tools/list_changed so the client reloads the tool list.",
   inputSchema: {
     type: "object",
     properties: {},
@@ -123,7 +127,11 @@ export function createMcpServer(): Server {
     },
     {
       capabilities: {
-        tools: {},
+        // listChanged tells clients to honor notifications/tools/list_changed
+        // after atera_navigate / atera_back. Without it, hosts keep the
+        // initial tool list (only atera_navigate) and domain tools stay
+        // uncallable. See WYRE-AI/atera-mcp#84.
+        tools: { listChanged: true },
         resources: {},
         extensions: {
           "io.modelcontextprotocol/ui": {
@@ -154,8 +162,20 @@ export function createMcpServer(): Server {
     try {
       // Handle navigation
       if (name === "atera_navigate") {
-        const { domain } = args as { domain: Domain };
+        const domain = (args as { domain?: unknown } | undefined)?.domain;
+        if (!isDomain(domain)) {
+          return {
+            content: [
+              {
+                type: "text",
+                text: `Unknown domain: ${String(domain)}. Use atera_navigate with one of: customers, agents, tickets, alerts, contacts.`,
+              },
+            ],
+            isError: true,
+          };
+        }
         state.currentDomain = domain;
+        await server.sendToolListChanged();
 
         const domainTools = getDomainTools(domain);
         const toolNames = domainTools.map((t) => t.name).join(", ");
@@ -173,6 +193,7 @@ export function createMcpServer(): Server {
       // Handle back navigation
       if (name === "atera_back") {
         state.currentDomain = null;
+        await server.sendToolListChanged();
         return {
           content: [
             {
