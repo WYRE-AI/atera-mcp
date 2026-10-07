@@ -10,6 +10,7 @@
 
 import { AsyncLocalStorage } from "node:async_hooks";
 import type { AteraClient } from "@wyre-technology/node-atera";
+import { installJwtAuthFetch } from "./atera-auth.js";
 
 export interface AteraCredentials {
   apiKey: string;
@@ -45,6 +46,10 @@ const clientCache = new Map<string, AteraClient>();
  * @returns Promise resolving to the AteraClient instance
  */
 export async function getClient(): Promise<AteraClient> {
+  // node-atera <=1.0.7 sends only X-API-KEY. Rewrite JWT keys to Bearer
+  // before the client issues a request. See utils/atera-auth.ts.
+  installJwtAuthFetch();
+
   // Prefer per-request credentials from async context
   const perRequest = credentialStore.getStore();
   const apiKey = perRequest?.apiKey ?? process.env.ATERA_API_KEY;
@@ -52,7 +57,7 @@ export async function getClient(): Promise<AteraClient> {
   if (!apiKey) {
     throw new Error(
       "ATERA_API_KEY environment variable is required. " +
-        "Set it to your Atera API key from the Admin > API section."
+        "Set it to your Atera API token or legacy key from Admin > Data management > API."
     );
   }
 

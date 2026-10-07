@@ -6,6 +6,10 @@
  */
 
 import { describe, it, expect, vi } from "vitest";
+import { Client } from "@modelcontextprotocol/sdk/client/index.js";
+import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
+import { ToolListChangedNotificationSchema } from "@modelcontextprotocol/sdk/types.js";
+import { createMcpServer } from "../mcp-server.js";
 
 // Mock the client utility for all domain handlers
 vi.mock("../utils/client.js", () => ({
@@ -161,6 +165,114 @@ describe("navigation and state management", () => {
       state.currentDomain = "tickets";
 
       expect(state.currentDomain).toBe("tickets");
+    });
+  });
+
+  describe("tools/list_changed after navigation", () => {
+    async function connectClient() {
+      const server = createMcpServer();
+      const client = new Client({ name: "nav-test", version: "1.0.0" });
+      const [clientTransport, serverTransport] =
+        InMemoryTransport.createLinkedPair();
+
+      let listChanged = 0;
+      client.setNotificationHandler(
+        ToolListChangedNotificationSchema,
+        async () => {
+          listChanged += 1;
+        }
+      );
+
+      await Promise.all([
+        client.connect(clientTransport),
+        server.connect(serverTransport),
+      ]);
+
+      return {
+        client,
+        server,
+        listChanged: () => listChanged,
+      };
+    }
+
+    it("advertises tools.listChanged and starts with only atera_navigate", async () => {
+      const { client, server } = await connectClient();
+      expect(client.getServerCapabilities()?.tools?.listChanged).toBe(true);
+
+      const listed = await client.listTools();
+      expect(listed.tools.map((tool) => tool.name)).toEqual(["atera_navigate"]);
+
+      await client.close();
+      await server.close();
+    });
+
+    it("notifies and lists domain tools after atera_navigate, then returns to navigate on atera_back", async () => {
+      const { client, server, listChanged } = await connectClient();
+
+      const navigated = await client.callTool({
+        name: "atera_navigate",
+        arguments: { domain: "tickets" },
+      });
+      expect(listChanged()).toBe(1);
+      const navigatedText = JSON.stringify(navigated);
+      expect(navigatedText).toContain("atera_tickets_list");
+
+      const domainTools = await client.listTools();
+      const domainNames = domainTools.tools.map((tool) => tool.name);
+      expect(domainNames).toContain("atera_back");
+      expect(domainNames).toContain("atera_tickets_list");
+      expect(domainNames).toContain("atera_tickets_get");
+      expect(domainNames).not.toContain("atera_navigate");
+      expect(domainNames.some((name) => name.startsWith("atera_customers_"))).toBe(
+        false
+      );
+
+      await client.callTool({ name: "atera_back", arguments: {} });
+      expect(listChanged()).toBe(2);
+
+      const root = await client.listTools();
+      expect(root.tools.map((tool) => tool.name)).toEqual(["atera_navigate"]);
+
+      await client.close();
+      await server.close();
+    });
+
+    it("does not notify or change the tool list for an unknown domain", async () => {
+      const { client, server, listChanged } = await connectClient();
+
+      const result = await client.callTool({
+        name: "atera_navigate",
+        arguments: { domain: "billing" },
+      });
+      expect(result.isError).toBe(true);
+      expect(listChanged()).toBe(0);
+
+      const names = (await client.listTools()).tools.map((tool) => tool.name);
+      expect(names).toEqual(["atera_navigate"]);
+
+      await client.close();
+      await server.close();
+    });
+
+    it("sends list_changed again when switching domains", async () => {
+      const { client, server, listChanged } = await connectClient();
+
+      await client.callTool({
+        name: "atera_navigate",
+        arguments: { domain: "customers" },
+      });
+      await client.callTool({
+        name: "atera_navigate",
+        arguments: { domain: "alerts" },
+      });
+      expect(listChanged()).toBe(2);
+
+      const names = (await client.listTools()).tools.map((tool) => tool.name);
+      expect(names).toContain("atera_alerts_list");
+      expect(names).not.toContain("atera_customers_list");
+
+      await client.close();
+      await server.close();
     });
   });
 

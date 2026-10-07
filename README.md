@@ -72,13 +72,18 @@ Set the following environment variable:
 
 | Variable | Required | Description |
 |----------|----------|-------------|
-| `ATERA_API_KEY` | Yes | Your Atera API key from Admin > API |
+| `ATERA_API_KEY` | Yes | Your Atera API token or legacy API key from Admin > Data management > API. JWT tokens are sent as `Authorization: Bearer`; legacy keys are sent as `X-API-KEY`. |
 
 ### Getting Your API Key
 
 1. Log into Atera as an admin
-2. Go to **Admin** > **API**
-3. Generate or copy your API key
+2. Go to **Admin** > **Data management** > **API**
+3. Create an API token (JWT) or copy a legacy API key
+
+JWT tokens (issuer `AteraInterop`) authenticate with `Authorization: Bearer`.
+Legacy static keys authenticate with `X-API-KEY`. This server selects the
+header from the key shape, including when the installed `node-atera` client
+still sends only `X-API-KEY`.
 
 ## Usage
 
@@ -128,8 +133,9 @@ This server uses a navigation-based approach to tool discovery:
 
 1. **Start**: Only `atera_navigate` tool is available
 2. **Navigate**: Call `atera_navigate` with a domain (customers, agents, tickets, alerts, contacts)
-3. **Domain Tools**: After navigation, domain-specific tools become available
-4. **Back**: Use `atera_back` to return to domain selection
+3. **Tool list refresh**: The server declares `tools.listChanged` and sends `notifications/tools/list_changed` so the client re-fetches `tools/list`
+4. **Domain Tools**: After that refresh, domain-specific tools are available
+5. **Back**: Use `atera_back` to return to domain selection (this also sends `notifications/tools/list_changed`)
 
 This architecture:
 - Reduces tool list size for better LLM performance

@@ -66,9 +66,13 @@ describe("Cloudflare Worker entrypoint", () => {
     });
     expect(res.status).toBe(200);
     const body = (await res.json()) as {
-      result?: { serverInfo?: { name?: string } };
+      result?: {
+        serverInfo?: { name?: string };
+        capabilities?: { tools?: { listChanged?: boolean } };
+      };
     };
     expect(body.result?.serverInfo?.name).toBe("atera-mcp");
+    expect(body.result?.capabilities?.tools?.listChanged).toBe(true);
   });
 
   it("lists the navigation tool without credentials", async () => {

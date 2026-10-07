@@ -62,6 +62,9 @@
 
 ### Fixed
 
+- **Domain tools stay invisible after `atera_navigate`.** The server changed `currentDomain` and told the model which tools existed, but it never declared `tools.listChanged` or sent `notifications/tools/list_changed`. Clients that list tools once (Claude Desktop / Cowork, and the MCP spec) kept the startup list — only `atera_navigate` — so domain tools could not be called ([#84](https://github.com/WYRE-AI/atera-mcp/issues/84)). Navigation and `atera_back` now advertise `listChanged: true` and call `server.sendToolListChanged()` (SDK 1.30 `notifications/tools/list_changed`) before returning. Sessionful transports (stdio) pick up the new list on the next `tools/list`. Stateless HTTP still creates a server per request, so navigation state does not survive across HTTP requests; that is unchanged.
+- **JWT Atera API tokens returned 401.** New tokens from Admin > Data management > API are JWTs (issuer `AteraInterop`). Atera's API FAQ requires the key in the authorization header, and `GET /api/v3/tickets` returns 401 for `X-API-KEY` and 200 for `Authorization: Bearer` ([#84](https://github.com/WYRE-AI/atera-mcp/issues/84)). Header selection belongs in node-atera, which still sends only `X-API-KEY` (locked here as `@wyre-technology/node-atera@1.0.7`; publishes after the org migration use `@wyre-ai/node-atera`). `installJwtAuthFetch()` rewrites a JWT `X-API-KEY` to `Authorization: Bearer` on the way out so this server works before that client is released and the dependency is switched. Legacy keys are unchanged. The rewrite does nothing once the client already omits `X-API-KEY`.
+
 - **SDK: single-read HTTP response handling.** Bumped `@wyre-technology/node-atera`
   to `^1.0.6`, which reads each HTTP response body exactly once
   ([node-atera v1.0.6](https://github.com/WYRE-AI/node-atera/releases/tag/v1.0.6)).
