@@ -10,13 +10,11 @@
  *
  * Legacy static keys still use `X-API-KEY`.
  *
- * `@wyre-technology/node-atera` 1.0.7 (the version locked here) always sends
- * `X-API-KEY`. Header selection lives in node-atera (`src/auth.ts`) so every
- * consumer gets it, but this server also rewrites outbound fetches until that
- * release is published and this package can depend on it. The rewrite is a
- * no-op when the client already omits `X-API-KEY`.
- *
- * Keep `isJwtApiKey` / `normalizeApiKey` in sync with node-atera `src/auth.ts`.
+ * `@wyre-technology/node-atera` 1.0.7 (the version locked here, and current
+ * node-atera main) always sends `X-API-KEY`. Header selection belongs in that
+ * client so every consumer gets it; this server rewrites outbound fetches so
+ * JWT keys work before that release exists. The rewrite is a no-op when the
+ * client already omits `X-API-KEY`.
  */
 
 /** base64 or base64url, optional padding. JWT segments are base64url. */
