@@ -6,7 +6,7 @@ Model Context Protocol (MCP) server for interacting with the Atera RMM API. Impl
 ## One-Click Deployment
 
 > [!IMPORTANT]
-> **Before you click:** this server depends on `@wyre-technology/node-atera`,
+> **Before you click:** this server depends on `@wyre-ai/node-atera`,
 > which is hosted on the **GitHub Packages** npm registry. GitHub Packages has no
 > anonymous access — even though the package is public, every `npm install` needs a
 > token. The cloud builder runs `npm install` for you, so you must give it one, or
@@ -81,9 +81,9 @@ Set the following environment variable:
 3. Create an API token (JWT) or copy a legacy API key
 
 JWT tokens (issuer `AteraInterop`) authenticate with `Authorization: Bearer`.
-Legacy static keys authenticate with `X-API-KEY`. This server selects the
-header from the key shape, including when the installed `node-atera` client
-still sends only `X-API-KEY`.
+Legacy static keys authenticate with `X-API-KEY`. `@wyre-ai/node-atera`
+selects the header from the key shape. This server still rewrites a JWT that
+is sent as `X-API-KEY`.
 
 ## Usage
 

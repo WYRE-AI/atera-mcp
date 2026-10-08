@@ -5,7 +5,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 // Mock the node-atera module before importing the client
-vi.mock("@wyre-technology/node-atera", () => ({
+vi.mock("@wyre-ai/node-atera", () => ({
   AteraClient: vi.fn().mockImplementation(function () { return ({
     customers: { list: vi.fn(), get: vi.fn(), create: vi.fn() },
     agents: { list: vi.fn(), get: vi.fn(), getByMachineName: vi.fn() },
@@ -48,7 +48,7 @@ describe("client utility", () => {
       process.env.ATERA_API_KEY = "test-api-key";
 
       const { getClient } = await import("../utils/client.js");
-      const { AteraClient } = await import("@wyre-technology/node-atera");
+      const { AteraClient } = await import("@wyre-ai/node-atera");
 
       const client = await getClient();
 
@@ -60,7 +60,7 @@ describe("client utility", () => {
       process.env.ATERA_API_KEY = "test-api-key";
 
       const { getClient } = await import("../utils/client.js");
-      const { AteraClient } = await import("@wyre-technology/node-atera");
+      const { AteraClient } = await import("@wyre-ai/node-atera");
 
       const client1 = await getClient();
       const client2 = await getClient();
@@ -76,7 +76,7 @@ describe("client utility", () => {
       process.env.ATERA_API_KEY = "test-api-key";
 
       const { getClient, resetClient } = await import("../utils/client.js");
-      const { AteraClient } = await import("@wyre-technology/node-atera");
+      const { AteraClient } = await import("@wyre-ai/node-atera");
 
       await getClient();
       expect(AteraClient).toHaveBeenCalledTimes(1);
