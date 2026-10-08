@@ -10,11 +10,10 @@
  *
  * Legacy static keys still use `X-API-KEY`.
  *
- * `@wyre-technology/node-atera` 1.0.7 (the version locked here, and current
- * node-atera main) always sends `X-API-KEY`. Header selection belongs in that
- * client so every consumer gets it; this server rewrites outbound fetches so
- * JWT keys work before that release exists. The rewrite is a no-op when the
- * client already omits `X-API-KEY`.
+ * `@wyre-ai/node-atera` >=1.1.2 selects the header itself (JWT keys as
+ * `Authorization: Bearer` only, legacy keys on `X-API-KEY`; node-atera#92).
+ * This server still rewrites a JWT left on `X-API-KEY`. The rewrite is a
+ * no-op when the client already omits `X-API-KEY`.
  */
 
 /** base64 or base64url, optional padding. JWT segments are base64url. */

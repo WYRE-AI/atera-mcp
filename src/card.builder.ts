@@ -8,7 +8,7 @@
  * unchanged.
  */
 
-import type { AteraClient } from "@wyre-technology/node-atera";
+import type { AteraClient } from "@wyre-ai/node-atera";
 
 export const TICKET_CARD_RESOURCE_URI = "ui://atera/ticket-card.html";
 
