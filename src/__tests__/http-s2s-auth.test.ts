@@ -31,7 +31,7 @@ vi.mock("../utils/client.js", async (importOriginal) => {
   };
 });
 
-import { startHttpTransport } from "../index.js";
+import { exitOnStartupFailure, startHttpTransport } from "../index.js";
 
 const S2S_SECRET = "s2s-do-not-log-7f3a";
 const ENV_API_KEY = "env-api-key-must-not-be-used";
@@ -289,6 +289,30 @@ describe("HTTP startup", () => {
     process.env.CONDUIT_S2S_SECRET = S2S_SECRET;
     const server = await listen();
     expect(server.address).toBe("127.0.0.1");
+  });
+
+  it("rejects startup when the HTTP listen port is already in use", async () => {
+    process.env.CONDUIT_S2S_SECRET = S2S_SECRET;
+    const first = await listen();
+    process.env.MCP_HTTP_PORT = String(first.port);
+    await expect(startHttpTransport()).rejects.toMatchObject({ code: "EADDRINUSE" });
+  });
+
+  it("exits non-zero when HTTP startup rejects", () => {
+    const previousExitCode = process.exitCode;
+    const logs = captureStderr();
+    const exit = exitSpy();
+    try {
+      expect(() => exitOnStartupFailure("listen EADDRINUSE")).toThrow("process.exit:1");
+      expect(exit).toHaveBeenCalledWith(1);
+      expect(process.exitCode).toBe(1);
+      expect(logs.text()).toContain("EADDRINUSE");
+      expect(logs.text()).not.toContain(S2S_SECRET);
+    } finally {
+      process.exitCode = previousExitCode;
+      exit.mockRestore();
+      logs.restore();
+    }
   });
 });
 

@@ -64,6 +64,7 @@ const INSECURE_DEV_WARNING =
   "HTTP /mcp is not enforcing X-Gateway-S2S and is bound to 127.0.0.1 only. " +
   "Do not use this outside local development.";
 
+/** True for localhost, ::1, and 127.0.0.0/8, including IPv4-mapped forms. */
 function isLoopbackHost(host: string): boolean {
   const normalized = host.trim().toLowerCase().replace(/^\[(.+)\]$/, "$1");
   if (normalized === "localhost" || normalized === "::1") return true;
@@ -115,6 +116,7 @@ function resolveBindHost(hasRealSecret: boolean): string {
   return LOOPBACK_HOST;
 }
 
+/** First non-empty header value, or undefined when the header is missing or blank. */
 function headerValue(value: string | string[] | undefined): string | undefined {
   const raw = Array.isArray(value) ? value[0] : value;
   if (typeof raw !== "string") return undefined;
@@ -145,6 +147,9 @@ async function startStdioTransport(): Promise<void> {
 /**
  * Start the server with HTTP Streamable transport.
  * Each request gets a fresh Server + Transport (stateless).
+ *
+ * @returns The listening HTTP server. The caller owns that server and must
+ * close it on shutdown. This function does not install signal handlers.
  */
 export async function startHttpTransport(): Promise<HttpServer> {
   const port = parseInt(process.env.MCP_HTTP_PORT || "8080", 10);
@@ -266,6 +271,17 @@ export async function startHttpTransport(): Promise<HttpServer> {
 }
 
 /**
+ * Log a CLI startup rejection and terminate unsuccessfully.
+ * `httpServer.listen` failures reject `main()`. Logging that rejection
+ * without a nonzero status lets Node exit 0 once no handles remain.
+ */
+export function exitOnStartupFailure(error: unknown): never {
+  console.error(error);
+  process.exitCode = 1;
+  process.exit(1);
+}
+
+/**
  * Main entry point - selects transport based on MCP_TRANSPORT env var
  */
 async function main() {
@@ -301,5 +317,5 @@ if (process.env.VITEST !== "true") {
     process.exit(1);
   });
 
-  main().catch(console.error);
+  main().catch(exitOnStartupFailure);
 }
