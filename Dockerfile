@@ -61,9 +61,12 @@ ENV LOG_LEVEL=info
 ENV LOG_FORMAT=json
 ENV MCP_TRANSPORT=http
 ENV MCP_HTTP_PORT=8080
+# All interfaces inside the container. Startup still refuses to run without a
+# real CONDUIT_S2S_SECRET. MCP_ALLOW_INSECURE_DEV=1 forces 127.0.0.1 even
+# while this host is 0.0.0.0.
 ENV MCP_HTTP_HOST=0.0.0.0
-# Default to env mode for backward compatibility; set to 'gateway' for hosted deployment
-ENV AUTH_MODE=env
+# Gateway mode reads the Atera API key from the X-Atera-API-Key header only.
+ENV AUTH_MODE=gateway
 
 # Define volume for logs
 VOLUME ["/app/logs"]

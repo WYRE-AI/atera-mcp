@@ -68,11 +68,36 @@ npm run build
 
 ## Configuration
 
-Set the following environment variable:
+Copy [`.env.example`](.env.example) and set the variables below.
 
 | Variable | Required | Description |
 |----------|----------|-------------|
-| `ATERA_API_KEY` | Yes | Your Atera API token or legacy API key from Admin > Data management > API. JWT tokens are sent as `Authorization: Bearer`; legacy keys are sent as `X-API-KEY`. |
+| `ATERA_API_KEY` | For stdio and `AUTH_MODE=env` | Atera API token or legacy API key from Admin > Data management > API. JWT tokens are sent as `Authorization: Bearer`; legacy keys are sent as `X-API-KEY`. The Compose gateway service does not load this variable. |
+| `MCP_TRANSPORT` | No | `stdio` (default) or `http` |
+| `AUTH_MODE` | No | `gateway` (Docker image and Compose default) or `env`. Gateway mode requires `X-Atera-API-Key` on each `/mcp` request and never falls back to `ATERA_API_KEY`. `env` uses that variable only after S2S auth succeeds. |
+| `CONDUIT_S2S_SECRET` | Yes for HTTP | Service-to-service secret. Generate with `openssl rand -hex 32`. The HTTP server logs an error and exits non-zero when this is empty or a known placeholder (`changeme`, `your-s2s-secret`, `secret`, `placeholder`, and similar public examples). Compose will not start without it. Never commit a real value. The value is never logged. |
+| `MCP_ALLOW_INSECURE_DEV` | No | Set to exactly `1` only for local development to start HTTP without `CONDUIT_S2S_SECRET`. The process logs a warning, does not enforce `X-Gateway-S2S`, and forces the listener onto `127.0.0.1` even if `MCP_HTTP_HOST` is a wider address. A known placeholder secret is still refused. |
+| `MCP_HTTP_HOST` | No | Bind address when `MCP_TRANSPORT=http`. Defaults to `127.0.0.1` when unset. A configured `CONDUIT_S2S_SECRET` honors this value. The container image sets `0.0.0.0`. |
+| `MCP_HTTP_PORT` | No | HTTP port. Defaults to `8080`. |
+
+`/health` stays unauthenticated and does not read credentials. The stdio transport does not use `CONDUIT_S2S_SECRET`.
+
+### HTTP authentication
+
+With `MCP_TRANSPORT=http` and `CONDUIT_S2S_SECRET` set, every `/mcp` request must include `X-Gateway-S2S`. The check is `verifyS2sHeader` in [`src/s2s-verify.ts`](src/s2s-verify.ts): the header value is `t=<unix seconds>,v1=<hex>`, where the hex is HMAC-SHA256 of the literal string `t=<unix seconds>` keyed with `CONDUIT_S2S_SECRET` (64 lowercase hex characters). The timestamp must be within 300 seconds of the server clock. A missing or invalid header returns HTTP 401 before vendor credentials are read.
+
+```bash
+TS=$(date +%s)
+SIG=$(printf 't=%s' "$TS" | openssl dgst -sha256 -hmac "$CONDUIT_S2S_SECRET" -hex | awk '{print $NF}')
+curl -sS http://127.0.0.1:8080/mcp \
+  -H 'Content-Type: application/json' \
+  -H 'Accept: application/json, text/event-stream' \
+  -H "X-Gateway-S2S: t=${TS},v1=${SIG}" \
+  -H "X-Atera-API-Key: $ATERA_API_KEY" \
+  -d '{"jsonrpc":"2.0","id":1,"method":"tools/list"}'
+```
+
+In `AUTH_MODE=gateway`, `/mcp` also requires `X-Atera-API-Key`. That header is the only credential source for the request. With `AUTH_MODE=env`, the signed request uses `ATERA_API_KEY` from the environment when the header is absent.
 
 ### Getting Your API Key
 
@@ -122,9 +147,38 @@ Configure in the gateway registry:
 
 ### Docker
 
+The image listens on `0.0.0.0` inside the container (`MCP_HTTP_HOST`) and defaults to `AUTH_MODE=gateway`. Publish the port on loopback and pass a real S2S secret. In gateway mode the Atera API key arrives on each request as `X-Atera-API-Key`; it is not read from the environment.
+
 ```bash
+# Generate the secret first: openssl rand -hex 32
 docker build -t atera-mcp .
-docker run -e ATERA_API_KEY=your-key atera-mcp
+docker run \
+  -e CONDUIT_S2S_SECRET \
+  -p 127.0.0.1:8080:8080 \
+  atera-mcp
+```
+
+Compose refuses to start when `CONDUIT_S2S_SECRET` is unset, defaults `AUTH_MODE` to `gateway`, does not inject `ATERA_API_KEY`, and publishes `127.0.0.1:8080:8080`:
+
+```bash
+CONDUIT_S2S_SECRET="$CONDUIT_S2S_SECRET" docker compose up
+```
+
+Single-tenant HTTP (`AUTH_MODE=env`) still requires the S2S secret, then uses `ATERA_API_KEY`:
+
+```bash
+docker run \
+  -e CONDUIT_S2S_SECRET \
+  -e AUTH_MODE=env \
+  -e ATERA_API_KEY=your-key \
+  -p 127.0.0.1:8080:8080 \
+  atera-mcp
+```
+
+Local HTTP without a secret is development-only. It binds `127.0.0.1` only and logs a warning. A non-loopback `MCP_HTTP_HOST` is ignored and the override is logged:
+
+```bash
+MCP_TRANSPORT=http MCP_ALLOW_INSECURE_DEV=1 npm start
 ```
 
 ## Decision Tree Architecture

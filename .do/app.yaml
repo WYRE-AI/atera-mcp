@@ -20,6 +20,12 @@ services:
       - key: ATERA_API_KEY
         scope: RUN_TIME
         type: SECRET
+      # Required when MCP_TRANSPORT=http. Empty and known placeholders refuse
+      # to start. Set this as an encrypted SECRET in the App Platform UI.
+      # Generate with: openssl rand -hex 32
+      - key: CONDUIT_S2S_SECRET
+        scope: RUN_TIME
+        type: SECRET
       - key: MCP_TRANSPORT
         scope: RUN_TIME
         value: http
