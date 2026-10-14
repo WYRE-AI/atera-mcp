@@ -2,6 +2,14 @@
 
 ### Security
 
+- **HTTP transport fail-closed S2S authentication (CWE-306).** The HTTP MCP
+  listener no longer starts when `CONDUIT_S2S_SECRET` is empty or a known
+  placeholder. `MCP_ALLOW_INSECURE_DEV=1` is the only bypass for an empty
+  secret: it skips `X-Gateway-S2S` and forces the bind address to
+  `127.0.0.1`. Gateway mode requires `X-Atera-API-Key` on each request and
+  does not fall back to `ATERA_API_KEY`. If the HTTP server fails to listen,
+  the process exits non-zero.
+
 - **Cross-tenant elicitation/confirmation misroute (gateway mode).** The
   "server reference" used by elicitation helpers (`src/utils/elicitation.ts`
   — `elicitSelection` / `elicitText` / `elicitConfirmation`) was stored in a
