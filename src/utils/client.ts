@@ -9,7 +9,7 @@
  */
 
 import { AsyncLocalStorage } from "node:async_hooks";
-import type { AteraClient } from "@wyre-technology/node-atera";
+import type { AteraClient } from "@wyre-ai/node-atera";
 import { installJwtAuthFetch } from "./atera-auth.js";
 
 export interface AteraCredentials {
@@ -46,8 +46,9 @@ const clientCache = new Map<string, AteraClient>();
  * @returns Promise resolving to the AteraClient instance
  */
 export async function getClient(): Promise<AteraClient> {
-  // node-atera <=1.0.7 sends only X-API-KEY. Rewrite JWT keys to Bearer
-  // before the client issues a request. See utils/atera-auth.ts.
+  // @wyre-ai/node-atera >=1.1.2 already sends JWT keys as Bearer and omits
+  // X-API-KEY. The rewrite is a no-op in that case, and still corrects a JWT
+  // left on X-API-KEY. See utils/atera-auth.ts.
   installJwtAuthFetch();
 
   // Prefer per-request credentials from async context
@@ -63,7 +64,7 @@ export async function getClient(): Promise<AteraClient> {
 
   let client = clientCache.get(apiKey);
   if (!client) {
-    const { AteraClient } = await import("@wyre-technology/node-atera");
+    const { AteraClient } = await import("@wyre-ai/node-atera");
     client = new AteraClient({ apiKey });
     clientCache.set(apiKey, client);
   }
