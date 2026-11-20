@@ -184,6 +184,44 @@ export const ticketTools: Tool[] = [
       required: ["ticketId", "comment"],
     },
   },
+  {
+    name: "atera_tickets_list_work_hours",
+    description:
+      "List the work hours (time entries) logged on a ticket: technician, date, start and end, duration, billable flag.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        ticketId: { type: "number", description: "The ticket ID (required)" },
+        page: { type: "number", description: "Page number (1-indexed, default: 1)" },
+        itemsInPage: {
+          type: "number",
+          description: "Number of items per page (default: 50, max: 50)",
+        },
+      },
+      required: ["ticketId"],
+    },
+  },
+  {
+    name: "atera_tickets_log_work_hours",
+    description:
+      "Log time on a ticket as a work-hours entry. Needs the technician's contact ID, the date, and start and end times (ISO 8601, end after start). Billable defaults to Atera's own default when isBillable is omitted.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        ticketId: { type: "number", description: "The ticket ID (required)" },
+        technicianContactId: {
+          type: "number",
+          description: "Atera technician (contact) ID who did the work (required)",
+        },
+        date: { type: "string", description: "Work date, ISO 8601 (required)" },
+        startTime: { type: "string", description: "Start time, ISO 8601 (required)" },
+        endTime: { type: "string", description: "End time, ISO 8601, after startTime (required)" },
+        description: { type: "string", description: "What was done" },
+        isBillable: { type: "boolean" },
+      },
+      required: ["ticketId", "technicianContactId", "date", "startTime", "endTime"],
+    },
+  },
 ];
 
 /**
@@ -321,6 +359,66 @@ export async function handleTicketTool(
       const ticket = await client.tickets.update(ticketId, updateData);
       return {
         content: [{ type: "text", text: JSON.stringify(ticket, null, 2) }],
+      };
+    }
+
+    case "atera_tickets_list_work_hours": {
+      const { ticketId, page, itemsInPage } = args as {
+        ticketId?: number;
+        page?: number;
+        itemsInPage?: number;
+      };
+      if (typeof ticketId !== "number") {
+        return {
+          content: [{ type: "text", text: "ticketId (number) is required" }],
+          isError: true,
+        };
+      }
+      const response = await client.tickets.listWorkHours(ticketId, { page, itemsInPage });
+      return {
+        content: [{ type: "text", text: JSON.stringify(response, null, 2) }],
+      };
+    }
+
+    case "atera_tickets_log_work_hours": {
+      const a = args as {
+        ticketId?: number;
+        technicianContactId?: number;
+        date?: string;
+        startTime?: string;
+        endTime?: string;
+        description?: string;
+        isBillable?: boolean;
+      };
+      const problem = (() => {
+        if (typeof a.ticketId !== "number") return "ticketId (number) is required";
+        if (typeof a.technicianContactId !== "number") {
+          return "technicianContactId (number) is required";
+        }
+        if (!a.date || !a.startTime || !a.endTime) {
+          return "date, startTime and endTime are required";
+        }
+        const start = Date.parse(a.startTime);
+        const end = Date.parse(a.endTime);
+        if (Number.isNaN(Date.parse(a.date)) || Number.isNaN(start) || Number.isNaN(end)) {
+          return "date, startTime and endTime must be ISO 8601 values";
+        }
+        if (end <= start) return "endTime must be after startTime";
+        return undefined;
+      })();
+      if (problem) {
+        return { content: [{ type: "text", text: problem }], isError: true };
+      }
+      const logged = await client.tickets.createWorkHours(a.ticketId as number, {
+        TechnicianContactID: a.technicianContactId as number,
+        Date: a.date as string,
+        StartTime: a.startTime as string,
+        EndTime: a.endTime as string,
+        Description: a.description,
+        IsBillable: a.isBillable,
+      });
+      return {
+        content: [{ type: "text", text: JSON.stringify(logged, null, 2) }],
       };
     }
 

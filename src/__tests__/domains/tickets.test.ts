@@ -14,6 +14,8 @@ const mockClient = {
     update: vi.fn(),
     listComments: vi.fn(),
     createComment: vi.fn(),
+    listWorkHours: vi.fn(),
+    createWorkHours: vi.fn(),
   },
 };
 
@@ -40,8 +42,8 @@ describe("tickets domain", () => {
   });
 
   describe("ticketTools", () => {
-    it("should export five ticket tools", () => {
-      expect(ticketTools).toHaveLength(5);
+    it("should export seven ticket tools", () => {
+      expect(ticketTools).toHaveLength(7);
     });
 
     it("should have atera_tickets_list tool with filter options", () => {
@@ -297,6 +299,79 @@ describe("tickets domain", () => {
 
         expect(result.isError).toBe(true);
         expect(result.content[0].text).toContain("Unknown ticket tool");
+      });
+    });
+  });
+
+  describe("work hours (WYREAI-703)", () => {
+    const valid = {
+      ticketId: 5,
+      technicianContactId: 3,
+      date: "2026-11-20",
+      startTime: "2026-11-20T09:00:00Z",
+      endTime: "2026-11-20T09:30:00Z",
+      description: "Reset password",
+      isBillable: true,
+    };
+
+    it("exposes list and log tools with required fields", () => {
+      const log = ticketTools.find((t) => t.name === "atera_tickets_log_work_hours");
+      expect(log?.inputSchema.required).toEqual([
+        "ticketId",
+        "technicianContactId",
+        "date",
+        "startTime",
+        "endTime",
+      ]);
+      expect(ticketTools.some((t) => t.name === "atera_tickets_list_work_hours")).toBe(true);
+    });
+
+    it("logs work hours with Atera's field names", async () => {
+      mockClient.tickets.createWorkHours.mockResolvedValue({ WorkHoursID: 1 });
+      const result = await handleTicketTool("atera_tickets_log_work_hours", valid);
+      expect(result.isError).toBeUndefined();
+      expect(mockClient.tickets.createWorkHours).toHaveBeenCalledWith(5, {
+        TechnicianContactID: 3,
+        Date: "2026-11-20",
+        StartTime: "2026-11-20T09:00:00Z",
+        EndTime: "2026-11-20T09:30:00Z",
+        Description: "Reset password",
+        IsBillable: true,
+      });
+    });
+
+    it("rejects an end time that is not after the start", async () => {
+      const result = await handleTicketTool("atera_tickets_log_work_hours", {
+        ...valid,
+        endTime: valid.startTime,
+      });
+      expect(result.isError).toBe(true);
+      expect(mockClient.tickets.createWorkHours).not.toHaveBeenCalled();
+    });
+
+    it("rejects missing or malformed fields before calling Atera", async () => {
+      const missing = await handleTicketTool("atera_tickets_log_work_hours", {
+        ticketId: 5,
+      });
+      expect(missing.isError).toBe(true);
+      const badDate = await handleTicketTool("atera_tickets_log_work_hours", {
+        ...valid,
+        startTime: "not a time",
+      });
+      expect(badDate.isError).toBe(true);
+      expect(mockClient.tickets.createWorkHours).not.toHaveBeenCalled();
+    });
+
+    it("lists work hours with paging", async () => {
+      mockClient.tickets.listWorkHours.mockResolvedValue({ items: [] });
+      const result = await handleTicketTool("atera_tickets_list_work_hours", {
+        ticketId: 5,
+        page: 2,
+      });
+      expect(result.isError).toBeUndefined();
+      expect(mockClient.tickets.listWorkHours).toHaveBeenCalledWith(5, {
+        page: 2,
+        itemsInPage: undefined,
       });
     });
   });

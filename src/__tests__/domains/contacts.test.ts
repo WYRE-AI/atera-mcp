@@ -11,6 +11,8 @@ const mockClient = {
     list: vi.fn(),
     get: vi.fn(),
     listByCustomer: vi.fn(),
+    create: vi.fn(),
+    update: vi.fn(),
   },
 };
 
@@ -34,8 +36,8 @@ describe("contacts domain", () => {
   });
 
   describe("contactTools", () => {
-    it("should export three contact tools", () => {
-      expect(contactTools).toHaveLength(3);
+    it("should export five contact tools", () => {
+      expect(contactTools).toHaveLength(5);
     });
 
     it("should have atera_contacts_list tool", () => {
@@ -157,6 +159,59 @@ describe("contacts domain", () => {
         expect(result.isError).toBe(true);
         expect(result.content[0].text).toContain("Unknown contact tool");
       });
+    });
+  });
+
+  describe("create and update (WYREAI-703)", () => {
+    it("creates a contact with Atera's field names", async () => {
+      mockClient.contacts.create.mockResolvedValue({ ContactID: 9 });
+      const result = await handleContactTool("atera_contacts_create", {
+        customerId: 4,
+        email: "new.user@example.com",
+        firstName: "New",
+        lastName: "User",
+      });
+      expect(result.isError).toBeUndefined();
+      expect(mockClient.contacts.create).toHaveBeenCalledWith({
+        CustomerID: 4,
+        Email: "new.user@example.com",
+        FirstName: "New",
+        LastName: "User",
+        JobTitle: undefined,
+        Phone: undefined,
+        MobilePhone: undefined,
+        IsContactPerson: undefined,
+      });
+    });
+
+    it("requires customerId and email to create", async () => {
+      const result = await handleContactTool("atera_contacts_create", { customerId: 4 });
+      expect(result.isError).toBe(true);
+      expect(mockClient.contacts.create).not.toHaveBeenCalled();
+    });
+
+    it("updates only the fields passed", async () => {
+      mockClient.contacts.update.mockResolvedValue({ ContactID: 9 });
+      const result = await handleContactTool("atera_contacts_update", {
+        contactId: 9,
+        jobTitle: "Owner",
+      });
+      expect(result.isError).toBeUndefined();
+      expect(mockClient.contacts.update).toHaveBeenCalledWith(9, {
+        Email: undefined,
+        FirstName: undefined,
+        LastName: undefined,
+        JobTitle: "Owner",
+        Phone: undefined,
+        MobilePhone: undefined,
+        IsContactPerson: undefined,
+      });
+    });
+
+    it("rejects an update with no changes", async () => {
+      const result = await handleContactTool("atera_contacts_update", { contactId: 9 });
+      expect(result.isError).toBe(true);
+      expect(mockClient.contacts.update).not.toHaveBeenCalled();
     });
   });
 });

@@ -46,7 +46,7 @@ describe("flat tool list", () => {
 
     it("should return ticket tools for tickets domain", async () => {
       const { ticketTools } = await import("../domains/tickets.js");
-      expect(ticketTools).toHaveLength(5);
+      expect(ticketTools).toHaveLength(7);
       expect(ticketTools[0].name).toBe("atera_tickets_list");
     });
 
@@ -58,7 +58,7 @@ describe("flat tool list", () => {
 
     it("should return contact tools for contacts domain", async () => {
       const { contactTools } = await import("../domains/contacts.js");
-      expect(contactTools).toHaveLength(3);
+      expect(contactTools).toHaveLength(5);
       expect(contactTools[0].name).toBe("atera_contacts_list");
     });
   });
@@ -113,12 +113,12 @@ describe("flat tool list", () => {
       return { client, server };
     }
 
-    it("lists all 18 domain tools on a fresh session, with no navigation tools", async () => {
+    it("lists all 24 domain tools on a fresh session, with no navigation tools", async () => {
       const { client, server } = await connectClient();
 
       const names = (await client.listTools()).tools.map((tool) => tool.name);
-      expect(names).toHaveLength(18);
-      expect(new Set(names).size).toBe(18);
+      expect(names).toHaveLength(24);
+      expect(new Set(names).size).toBe(24);
       expect(names).not.toContain("atera_navigate");
       expect(names).not.toContain("atera_back");
       for (const prefix of [
@@ -127,6 +127,7 @@ describe("flat tool list", () => {
         "atera_tickets_",
         "atera_alerts_",
         "atera_contacts_",
+        "atera_invoices_",
       ]) {
         expect(names.some((name) => name.startsWith(prefix))).toBe(true);
       }

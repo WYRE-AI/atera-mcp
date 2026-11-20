@@ -88,7 +88,7 @@ describe("Cloudflare Worker entrypoint", () => {
       result?: { tools?: { name: string }[] };
     };
     const names = (body.result?.tools ?? []).map((t) => t.name);
-    expect(names).toHaveLength(18);
+    expect(names).toHaveLength(24);
     expect(names).toContain("atera_tickets_list");
     expect(names).not.toContain("atera_navigate");
   });

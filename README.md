@@ -1,6 +1,6 @@
 # Atera MCP Server
 
-Model Context Protocol (MCP) server for interacting with the Atera RMM API. Serves a flat list of 18 tools, all listed on a fresh session.
+Model Context Protocol (MCP) server for interacting with the Atera RMM API. Serves a flat list of 24 tools, all listed on a fresh session.
 
 
 ## One-Click Deployment
@@ -36,7 +36,7 @@ Model Context Protocol (MCP) server for interacting with the Atera RMM API. Serv
 
 ## Features
 
-- **Flat Tool List**: All 18 tools (customers, agents, tickets, alerts, contacts) are listed on a fresh session. No navigation step is needed.
+- **Flat Tool List**: All 24 tools (customers, agents, tickets, alerts, contacts, invoices) are listed on a fresh session. No navigation step is needed.
 - **Lazy Client Loading**: The Atera client is only instantiated when first needed, reducing startup time.
 - **Full API Coverage**: Supports customer management, device/agent monitoring, ticket operations, alert handling, and contact management.
 - **Rate Limit Handling**: Built-in rate limiting via the node-atera client (700 req/min).
