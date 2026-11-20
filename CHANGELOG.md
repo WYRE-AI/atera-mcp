@@ -1,5 +1,9 @@
 ## [Unreleased]
 
+### Added
+
+- **Job depth (WYREAI-703).** Six tools: `atera_tickets_log_work_hours`, `atera_tickets_list_work_hours`, `atera_invoices_list`, `atera_invoices_get`, `atera_contacts_create`, `atera_contacts_update`. The tool list is now 24 tools. Not covered: patch_device and backup_check, which node-atera does not expose yet.
+
 ### Changed
 
 - **Flat tool list (WYREAI-758, WYREAI-755).** `tools/list` now returns all 18 domain tools on a fresh session. The `atera_navigate` and `atera_back` tools, the per-session `currentDomain` state and the `tools.listChanged` capability are removed. Conduit drops `_navigate` and `_back` from every tool list, so behind Conduit the domain tools were never listed. Tool names, schemas and routing by name prefix are unchanged.

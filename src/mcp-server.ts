@@ -23,6 +23,7 @@ import { agentTools, handleAgentTool } from "./domains/agents.js";
 import { ticketTools, handleTicketTool } from "./domains/tickets.js";
 import { alertTools, handleAlertTool } from "./domains/alerts.js";
 import { contactTools, handleContactTool } from "./domains/contacts.js";
+import { invoiceTools, handleInvoiceTool } from "./domains/invoices.js";
 import { registerResourceHandlers } from "./resources.js";
 import type { AteraCredentials } from "./utils/client.js";
 
@@ -37,6 +38,7 @@ const allTools: Tool[] = [
   ...ticketTools,
   ...alertTools,
   ...contactTools,
+  ...invoiceTools,
 ];
 
 /**
@@ -94,6 +96,9 @@ export function createMcpServer(): Server {
       }
       if (name.startsWith("atera_contacts_")) {
         return await handleContactTool(name, toolArgs);
+      }
+      if (name.startsWith("atera_invoices_")) {
+        return await handleInvoiceTool(name, toolArgs);
       }
 
       // Unknown tool
