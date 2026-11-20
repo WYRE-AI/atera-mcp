@@ -1,6 +1,6 @@
 # Atera MCP Server
 
-Model Context Protocol (MCP) server for interacting with the Atera RMM API. Implements a decision tree architecture for efficient tool discovery and reduced context overhead.
+Model Context Protocol (MCP) server for interacting with the Atera RMM API. Serves a flat list of 18 tools, all listed on a fresh session.
 
 
 ## One-Click Deployment
@@ -36,7 +36,7 @@ Model Context Protocol (MCP) server for interacting with the Atera RMM API. Impl
 
 ## Features
 
-- **Decision Tree Navigation**: Tools are organized by domain (customers, agents, tickets, alerts, contacts). Navigate to a domain first, then use domain-specific tools.
+- **Flat Tool List**: All 18 tools (customers, agents, tickets, alerts, contacts) are listed on a fresh session. No navigation step is needed.
 - **Lazy Client Loading**: The Atera client is only instantiated when first needed, reducing startup time.
 - **Full API Coverage**: Supports customer management, device/agent monitoring, ticket operations, alert handling, and contact management.
 - **Rate Limit Handling**: Built-in rate limiting via the node-atera client (700 req/min).
@@ -181,20 +181,9 @@ Local HTTP without a secret is development-only. It binds `127.0.0.1` only and l
 MCP_TRANSPORT=http MCP_ALLOW_INSECURE_DEV=1 npm start
 ```
 
-## Decision Tree Architecture
+## Tool Discovery
 
-This server uses a navigation-based approach to tool discovery:
-
-1. **Start**: Only `atera_navigate` tool is available
-2. **Navigate**: Call `atera_navigate` with a domain (customers, agents, tickets, alerts, contacts)
-3. **Tool list refresh**: The server declares `tools.listChanged` and sends `notifications/tools/list_changed` so the client re-fetches `tools/list`
-4. **Domain Tools**: After that refresh, domain-specific tools are available
-5. **Back**: Use `atera_back` to return to domain selection (this also sends `notifications/tools/list_changed`)
-
-This architecture:
-- Reduces tool list size for better LLM performance
-- Groups related operations logically
-- Minimizes context window usage
+`tools/list` returns every domain tool immediately. There are no `atera_navigate` or `atera_back` tools; the server holds no per-session navigation state, so it works the same over stdio, stateless HTTP and behind a gateway.
 
 ## Available Domains
 
@@ -235,8 +224,7 @@ Manage customer contacts.
 ```
 User: List all open tickets
 
-Claude: I'll navigate to the tickets domain and list open tickets.
-[Calls atera_navigate with domain: "tickets"]
+Claude: I'll list open tickets.
 [Calls atera_tickets_list with ticketStatus: "Open"]
 
 Result: Found 15 open tickets...

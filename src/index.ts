@@ -3,8 +3,8 @@
  * Atera MCP Server
  *
  * This MCP server provides tools for interacting with the Atera RMM API.
- * It implements a decision tree architecture where tools are dynamically
- * loaded based on the selected domain.
+ * It serves a flat tool list: every domain tool is listed on a fresh
+ * session, with no navigation step.
  *
  * Supports both stdio and HTTP (StreamableHTTP) transports.
  * Authentication: Set ATERA_API_KEY environment variable (env mode)

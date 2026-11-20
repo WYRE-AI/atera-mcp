@@ -6,8 +6,9 @@
  * - `index.ts` — stdio + Node HTTP transport
  * - `worker.ts` — Cloudflare Workers (Web Standard) transport
  *
- * The Atera server uses a decision-tree (navigation) architecture: a fresh
- * server is created per connection so each holds its own `currentDomain` state.
+ * The Atera server serves a flat tool list: `tools/list` returns every domain
+ * tool on a fresh session, so gateways and clients that never call a
+ * navigation tool still see all of them.
  */
 
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
@@ -28,84 +29,15 @@ import type { AteraCredentials } from "./utils/client.js";
 export type { AteraCredentials };
 
 /**
- * Available domains for navigation
+ * Every domain tool, in a stable order.
  */
-type Domain = "customers" | "agents" | "tickets" | "alerts" | "contacts";
-
-/**
- * Domain metadata for navigation
- */
-const domainDescriptions: Record<Domain, string> = {
-  customers:
-    "Customer/company management - list, get, and create customer records",
-  agents:
-    "Agent/device management - list and get managed devices with RMM agent installed",
-  tickets:
-    "Ticket management - list, get, create, update, and comment on service tickets",
-  alerts:
-    "Alert monitoring - list and get alerts from monitored devices and agents",
-  contacts: "Contact management - list and get customer contact information",
-};
-
-/**
- * Get tools for a specific domain
- */
-function isDomain(value: unknown): value is Domain {
-  return typeof value === "string" && Object.hasOwn(domainDescriptions, value);
-}
-
-function getDomainTools(domain: Domain): Tool[] {
-  switch (domain) {
-    case "customers":
-      return customerTools;
-    case "agents":
-      return agentTools;
-    case "tickets":
-      return ticketTools;
-    case "alerts":
-      return alertTools;
-    case "contacts":
-      return contactTools;
-  }
-}
-
-/**
- * Navigation tool - entry point for decision tree
- */
-const navigateTool: Tool = {
-  name: "atera_navigate",
-  description:
-    "Navigate to a specific domain in Atera. Call this first to select which area you want to work with. After navigation the server sends notifications/tools/list_changed so the client reloads the tool list and domain-specific tools become available.",
-  inputSchema: {
-    type: "object",
-    properties: {
-      domain: {
-        type: "string",
-        enum: ["customers", "agents", "tickets", "alerts", "contacts"],
-        description: `The domain to navigate to:
-- customers: ${domainDescriptions.customers}
-- agents: ${domainDescriptions.agents}
-- tickets: ${domainDescriptions.tickets}
-- alerts: ${domainDescriptions.alerts}
-- contacts: ${domainDescriptions.contacts}`,
-      },
-    },
-    required: ["domain"],
-  },
-};
-
-/**
- * Back navigation tool - return to domain selection
- */
-const backTool: Tool = {
-  name: "atera_back",
-  description:
-    "Return to domain selection. Use this to switch to a different area of Atera. The server sends notifications/tools/list_changed so the client reloads the tool list.",
-  inputSchema: {
-    type: "object",
-    properties: {},
-  },
-};
+const allTools: Tool[] = [
+  ...customerTools,
+  ...agentTools,
+  ...ticketTools,
+  ...alertTools,
+  ...contactTools,
+];
 
 /**
  * Create a fresh MCP server instance with all handlers registered.
@@ -118,8 +50,6 @@ const backTool: Tool = {
  * `utils/server-ref.ts` for why this matters.
  */
 export function createMcpServer(): Server {
-  const state = { currentDomain: null as Domain | null };
-
   const server = new Server(
     {
       name: "atera-mcp",
@@ -127,11 +57,7 @@ export function createMcpServer(): Server {
     },
     {
       capabilities: {
-        // listChanged tells clients to honor notifications/tools/list_changed
-        // after atera_navigate / atera_back. Without it, hosts keep the
-        // initial tool list (only atera_navigate) and domain tools stay
-        // uncallable. See WYRE-AI/atera-mcp#84.
-        tools: { listChanged: true },
+        tools: {},
         resources: {},
         extensions: {
           "io.modelcontextprotocol/ui": {
@@ -143,67 +69,14 @@ export function createMcpServer(): Server {
   );
   registerResourceHandlers(server);
 
-  server.setRequestHandler(ListToolsRequestSchema, async () => {
-    const tools: Tool[] = [];
-
-    if (state.currentDomain === null) {
-      tools.push(navigateTool);
-    } else {
-      tools.push(backTool);
-      tools.push(...getDomainTools(state.currentDomain));
-    }
-
-    return { tools };
-  });
+  server.setRequestHandler(ListToolsRequestSchema, async () => ({
+    tools: allTools,
+  }));
 
   server.setRequestHandler(CallToolRequestSchema, async (request) => {
     const { name, arguments: args } = request.params;
 
     try {
-      // Handle navigation
-      if (name === "atera_navigate") {
-        const domain = (args as { domain?: unknown } | undefined)?.domain;
-        if (!isDomain(domain)) {
-          return {
-            content: [
-              {
-                type: "text",
-                text: `Unknown domain: ${String(domain)}. Use atera_navigate with one of: customers, agents, tickets, alerts, contacts.`,
-              },
-            ],
-            isError: true,
-          };
-        }
-        state.currentDomain = domain;
-        await server.sendToolListChanged();
-
-        const domainTools = getDomainTools(domain);
-        const toolNames = domainTools.map((t) => t.name).join(", ");
-
-        return {
-          content: [
-            {
-              type: "text",
-              text: `Navigated to ${domain} domain. Available tools: ${toolNames}`,
-            },
-          ],
-        };
-      }
-
-      // Handle back navigation
-      if (name === "atera_back") {
-        state.currentDomain = null;
-        await server.sendToolListChanged();
-        return {
-          content: [
-            {
-              type: "text",
-              text: "Returned to domain selection. Use atera_navigate to select a domain: customers, agents, tickets, alerts, contacts",
-            },
-          ],
-        };
-      }
-
       // Route to appropriate domain handler
       const toolArgs = (args ?? {}) as Record<string, unknown>;
 
@@ -228,7 +101,7 @@ export function createMcpServer(): Server {
         content: [
           {
             type: "text",
-            text: `Unknown tool: ${name}. Use atera_navigate to select a domain first.`,
+            text: `Unknown tool: ${name}.`,
           },
         ],
         isError: true,
