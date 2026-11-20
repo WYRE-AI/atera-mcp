@@ -12,7 +12,7 @@
 - **Stack**: TypeScript (ESM), MCP SDK (`@modelcontextprotocol/sdk`), vendor-specific Node.js client library
 - **Transport**: Dual-mode — stdio (local/Claude Desktop) and Streamable HTTP (gateway)
 - **Auth modes**: Local (env vars) and Gateway (credentials injected via HTTP headers by the gateway proxy)
-- **Tool pattern**: Decision-tree — a navigation tool exposes domains first, then dynamically loads domain-specific tools to avoid overwhelming Claude with 20+ tools at once
+- **Tool pattern**: Flat — `tools/list` returns every domain tool on a fresh session (no navigation tools), so gateways that hide `_navigate` still list them
 - **Packaging**: MCPB bundles (`.mcpb`) for one-click Claude Desktop install, Docker images for gateway deployment
 - **CI/CD**: GitHub Actions — CI on push, semantic-release on main, Docker build + MCPB upload on release
 - **Testing**: Jest with `ts-jest`
@@ -35,7 +35,7 @@
 - Dual-mode: changes must work in both stdio and HTTP transport modes
 
 ### Architecture & Patterns
-- Tool registration must follow the decision-tree pattern: navigation tool → domain selection → domain-specific tools
+- Tool registration must stay flat: `tools/list` returns every domain tool with no navigation tool or per-session state
 - Each tool must have a clear Zod input schema with descriptions — Claude uses these to understand parameters
 - Service layer (`*Service` class) handles all vendor API calls; tool handlers should not make HTTP requests directly
 - Server instructions (`getServerInstructions()`) must accurately describe available capabilities

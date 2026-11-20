@@ -72,10 +72,11 @@ describe("Cloudflare Worker entrypoint", () => {
       };
     };
     expect(body.result?.serverInfo?.name).toBe("atera-mcp");
-    expect(body.result?.capabilities?.tools?.listChanged).toBe(true);
+    expect(body.result?.capabilities?.tools).toBeDefined();
+    expect(body.result?.capabilities?.tools?.listChanged).toBeFalsy();
   });
 
-  it("lists the navigation tool without credentials", async () => {
+  it("lists every domain tool without credentials", async () => {
     const res = await mcp({
       jsonrpc: "2.0",
       id: 2,
@@ -87,7 +88,9 @@ describe("Cloudflare Worker entrypoint", () => {
       result?: { tools?: { name: string }[] };
     };
     const names = (body.result?.tools ?? []).map((t) => t.name);
-    expect(names).toContain("atera_navigate");
+    expect(names).toHaveLength(18);
+    expect(names).toContain("atera_tickets_list");
+    expect(names).not.toContain("atera_navigate");
   });
 
   it("returns a graceful error for a credential-requiring tool when unconfigured", async () => {

@@ -1,5 +1,9 @@
 ## [Unreleased]
 
+### Changed
+
+- **Flat tool list (WYREAI-758, WYREAI-755).** `tools/list` now returns all 18 domain tools on a fresh session. The `atera_navigate` and `atera_back` tools, the per-session `currentDomain` state and the `tools.listChanged` capability are removed. Conduit drops `_navigate` and `_back` from every tool list, so behind Conduit the domain tools were never listed. Tool names, schemas and routing by name prefix are unchanged.
+
 ### Security
 
 - **HTTP transport fail-closed S2S authentication (CWE-306).** The HTTP MCP

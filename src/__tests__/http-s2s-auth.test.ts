@@ -412,7 +412,8 @@ describe("HTTP /mcp authentication", () => {
         result?: { tools?: Array<{ name?: string }> };
       };
       const names = (payload.result?.tools ?? []).map((tool) => tool.name);
-      expect(names).toContain("atera_navigate");
+      expect(names).toHaveLength(18);
+      expect(names).toContain("atera_tickets_list");
       expect(response.body).not.toContain(S2S_SECRET);
       expect(response.body).not.toContain(ENV_API_KEY);
       expect(response.body).not.toContain(HEADER_API_KEY);
